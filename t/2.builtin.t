@@ -47,7 +47,14 @@ untie %U1;
 
 print "\nTesting 'commify'\n";
 import Interpolation C1 => 'commify';
-check("$C1{'the quick brown fox'}" == 0); print STDERR "\t(the warning above IS expected!)\n";
+
+$SIG{__WARN__} = sub { # catch the warning
+	print STDERR $_[0]
+		if ($_[0] !~ m/^Argument "the quick brown fox" isn't numeric in sprintf/);
+};
+check("$C1{'the quick brown fox'}" == 0);
+delete $SIG{__WARN__}; # stop catching warnings
+
 check("$C1{123}" eq '123.00');
 check("$C1{1234}" eq '1,234.00');
 check("$C1{12345}" eq '12,345.00');

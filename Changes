@@ -1,0 +1,10 @@
+Revision history for Perl extension Interpolation.
+
+Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
+Since version 0.66 maintained by Jenda@Krynicky.cz
+
+0.68 - Fri Apr 5 2002
+
+0.69 - Fri Feb 8 2003
+	added 'name:->$' (no parameters => tied scalar)
+	you may assign to interpolators with types '$->$', '$->@' and '->$'

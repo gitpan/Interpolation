@@ -2,14 +2,14 @@
 #
 # This module is copyright 1998 Mark-Jason Dominus.
 # (mjd-perl-interpolation@plover.com)
-# and 2002 Jenda Krynicky
+# and 2002-2003 Jenda Krynicky
 #
-# Version 0.68 by Jenda based on
+# Version 0.69 by Jenda based on
 # Version 0.53 alpha $Revision: 1.2 $ $Date: 1998/04/09 18:59:07 $ by MJD
 
 package Interpolation;
 use vars '$VERSION';
-$VERSION = '0.68';
+$VERSION = '0.69';
 use strict 'vars';
 use warnings;
 no warnings 'uninitialized'; # I don't want to be forced to use "if (defined $foo and $foo)
@@ -48,17 +48,31 @@ use Carp;
 	      my ($fmt, @args) = split(/$;/o, shift());
 	      sprintf($fmt, @args);
 	    },
+		'sprintfX' => sub {sprintf shift(), @_},
 	    'sqlescape' => sub {$_ = $_[0]; s/'/''/g; "'".$_},
 		'htmlescape' => sub {HTML::Entities::encode($_[0], '^\r\n\t !\#\$%\"\'-;=?-~')},
 		'tagescape' => sub {HTML::Entities::encode($_[0], '^\r\n\t !\#\$%\(-;=?-~')},
 		'jsescape' => sub {my $s = $_[0];$s =~ s/(['"])/\\$1/g;HTML::Entities::encode($s, '^\r\n\t !\#\$%\(-;=?-~')},
+		'round' => sub {
+			my ($number, $scale);
+			if (defined $_[1]) {
+				($number, $scale) = @_;
+			} else {
+				($number, $scale) = split /$;/o, $_[0];
+			}
+			$scale = 1 unless $scale;
+			return POSIX::floor(($number / $scale) + 0.5) * $scale;
+		}
 	   );
 
 %Interpolation::needmodules = (
 	'htmlescape' => 'use HTML::Entities;',
 	'tagescape' => 'use HTML::Entities;',
 	'jsescape' => 'use HTML::Entities;',
+	'round' => 'use POSIX;',
 );
+
+my %is_scalar;
 
 sub import {
   my $caller_pack = caller;
@@ -73,11 +87,16 @@ sub import {
     my $function = shift;
     my $type;
 
-    if ($hashname =~ /^(.*):([\$\@\*\\]+->[\$\@])$/) {
+    if ($hashname =~ /^(.*):([\$\@\*\\]*->[\$\@])$/) {
         # there is a type specification !
         $type = $2;
         $hashname = $1;
         if ($type eq '$->$') {
+        } elsif ($type eq '->$') {
+			$is_scalar{$caller_pack . '::' . $hashname} = undef;
+			my $fakescalar;
+			tie $fakescalar, 'Interpolation::Scalar', $function;
+			return *{$caller_pack . '::' . $hashname} = \$fakescalar;
         } elsif ($type eq '$->@') {
             $my_pack = 'Interpolation::S2A';
         } elsif ($type eq '@->$') {
@@ -86,23 +105,28 @@ sub import {
             $my_pack = 'Interpolation::A2A';
         } else {
             $my_pack = 'Interpolation::general';
-#            carp ("Interpolation: Type $type is not implemented yet!\n");
         }
 
     }
     # Probably should use ISA or something here, because
     # $function might be blessed
 	if (!(ref $function eq 'CODE')) {
-		if (exists $Interpolation::builtin{lc $function}) {
-			eval $Interpolation::needmodules{lc $function}
-				if (exists $Interpolation::needmodules{lc $function});
-			croak $@ if $@;
-			$function = $Interpolation::builtin{lc $function};
-		} elsif (exists $Interpolation::builtin{lc $hashname}) {
-			eval $Interpolation::needmodules{lc $hashname}
-				if (exists $Interpolation::needmodules{lc $hashname});
-			croak $@ if $@;
-			$function = $Interpolation::builtin{lc $hashname};
+		my $lc_function = lc $function;
+		my $lc_hashname;
+		if (exists $Interpolation::builtin{$lc_function}) {
+			if (exists $Interpolation::needmodules{$lc_function}) {
+				eval $Interpolation::needmodules{$lc_function};
+				croak $@ if $@;
+				delete $Interpolation::needmodules{$lc_function}
+			}
+			$function = $Interpolation::builtin{$lc_function};
+		} elsif ($lc_hashname = lc $hashname and exists $Interpolation::builtin{$lc_hashname}) {
+			if (exists $Interpolation::needmodules{$lc_hashname}) {
+				eval $Interpolation::needmodules{$lc_hashname};
+				croak $@ if $@;
+				delete $Interpolation::needmodules{$lc_hashname};
+			}
+			$function = $Interpolation::builtin{$lc_hashname};
 		} else {
 			croak "Unknown builtin $function!\n";
 		}
@@ -119,11 +143,19 @@ sub unimport {
 	my $caller_pack = caller;
 	my $my_pack = shift;
 	while (@_) {
-		my $hashname = shift;
-		my %fakehash;
-		my $oldhash = *{$caller_pack . '::' . $hashname}{HASH};
-		*{$caller_pack . '::' . $hashname} = \%fakehash;
-		untie %$oldhash;
+		my $varname = shift;
+		if (!exists $is_scalar{$caller_pack . '::' . $varname}) {
+			my $oldvar = *{$caller_pack . '::' . $varname}{HASH};
+			my %fakehash;
+			*{$caller_pack . '::' . $varname} = \%fakehash;
+			untie %$oldvar;
+		} else {
+			my $oldvar = *{$caller_pack . '::' . $varname}{SCALAR};
+			my $fakescalar;
+			*{$caller_pack . '::' . $varname} = \$fakescalar;
+			untie $$oldvar;
+			delete $is_scalar{$caller_pack . '::' . $varname};
+		}
 	}
 }
 
@@ -171,7 +203,11 @@ sub cut_it_out {
   croak "Not allowed to use $caller on an Interpolation variable; aborting";
 }
 
-*STORE = \&cut_it_out;
+sub STORE {
+  &{$_[0]}($_[1], $_[2]);		# For pre-5.004_04 compatibility
+  #$_[0]->($_[1]);		# Line of the day?
+}
+
 *DELETE = \&cut_it_out;
 *CLEAR = \&cut_it_out;
 *EXISTS = \&cut_it_out;
@@ -183,6 +219,14 @@ package Interpolation::S2A;
 @Interpolation::S2A::ISA = ('Interpolation');
 sub FETCH {
   join $", &{$_[0]}($_[1]);
+}
+
+sub STORE {
+	if (defined wantarray) {
+		join $", &{$_[0]}($_[1], $_[2]);
+	} else {
+		&{$_[0]}($_[1], $_[2]);
+	}
 }
 
 package Interpolation::A2A;
@@ -242,7 +286,7 @@ sub FETCH {
         if ($type =~ /\*$/) {$type .= $par1subtype.$par1type};  ##<???>
         my %fakehash;
         tie %fakehash, Interpolation::internal, [$type, $self->[1], @param];
-        \%fakehash;
+        bless \%fakehash, Interpolation::internal;
     }
 }
 
@@ -279,20 +323,55 @@ sub FETCH {
         my %fakehash;
         if ($self->[0] =~ /\*$/) {$self->[0] .= $par1subtype.$par1type};  ##<???>
         tie %fakehash, Interpolation::internal, $self;
-        \%fakehash;
+        bless \%fakehash, Interpolation::internal;
     }
 }
 
+use overload '""'   => sub {
+	my $self = tied(%{$_[0]});
+	my ($type, $code, @param) = @$self;
+	if ($type =~ /^\$/) {
+		&{$code}(@param);
+	} else {
+		join $", &{$code}(@param);
+	}
+};
 
+package Interpolation::Scalar;
+
+use Tie::Scalar;
+use Carp;
+our @ISA=(Tie::Scalar);
+
+package Interpolation::Scalar;
+
+sub TIESCALAR {
+  my $pack = shift;
+  my $cref = shift;
+  unless (ref $cref) {		# symbolic names not supported
+    croak "Builtins not supported for type (void)->\$";
+  }
+  bless $cref => $pack;		# That's it?  Yup!
+}
+
+sub FETCH {
+  &{$_[0]}();		# For pre-5.004_04 compatibility
+  #$_[0]->($_[1]);		# Line of the day?
+}
+
+sub STORE {
+  &{$_[0]}($_[1]);		# For pre-5.004_04 compatibility
+  #$_[0]->($_[1]);		# Line of the day?
+}
 
 
 1;
 
 =head1 NAME
 
-Interpolation - Arbitrary string interpolation semantics
+Interpolation - Arbitrary string interpolation semantics (using tie())
 
-Version 0.68
+Version 0.69
 
 Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
 Since version 0.66 maintained by Jenda@Krynicky.cz
@@ -322,7 +401,9 @@ only things that are evaluated in double-quoted strings are variable
 references.
 
 There are solutions to this, but most of them are ugly.  This module
-is less ugly.  It lets you define arbitrary interpolation semantics.
+is less ugly. Well .... this module IS ugly, but only inside. Your code may end up being nice.
+
+The module also lets you define arbitrary interpolation semantics.
 
 For example, you can say
 
@@ -352,7 +433,7 @@ the pair is C<($n, $f)>, then C<$n> will be the name for the semantics
 provided by C<$f>.  C<$f> must either be a reference to a function
 that you supply, or it can be the name of one of the built-in
 formatting functions provided by this package.  C<Interpolation> will
-take over the C<%n> hash in your package, and tie it so that acessing
+take over the C<%n> hash or C<$n> scalar in your package, and tie it so that acessing
 C<$n{X}> calls C<f(X)> and yields its return value.
 
 If for some reason you want to, you can add new semantics at run time
@@ -364,20 +445,41 @@ You can remove them again with
 
   unimport Interpolation 'name', ...
 
+Interpolators are always PACKAGE variables, not lexicals!
+
 =head2 Built-ins
 
 C<Interpolation> provides a few useful built-in formatting functions;
 you can refer to these by name in the C<use> or C<import> line.  They are:
 
-	eval			- Evaluate argument
+	eval			- Evaluate the argument
 	null			- Same as eval
 	identity		- Also the same as eval
+
 	ucwords		- Capitalize Input String Like This
+
 	commify		- 1428571 => 1,428,571.00
+
 	reverse		- reverse string
-	sprintf			- makes "$S{'%.2f %03d'}{37.5,42}" turn into "37.50 042".
+
+	sprintf			- makes "$S{'%.2f %03d'}{37.5,42}" turn into "37.50 042"
+		use Interpolation S => 'sprintf';
+		print "$S{'%.2f %03d'}{37.5, 42}\n";
+
 	sprintf1		- makes "$S{'%.2f %03d', 37.5,42}" turn into "37.50 042".
+		use Interpolation S => 'sprintf1';
+		print "$S{'%.2f %03d', 37.5, 42}\n";
+
+	sprintfX		- makes "$S{'%.2f %03d'}{37.5}{42}" turn into "37.50 042".
+		use Interpolation 'S:$$*->$' => 'sprintfX';
+		print "$S{'%.2f %03d'}{37.5}{42}\n";
+
 	sqlescape		- escapes single quotes for use in SQL queries
+
+	round			- rounds the number
+		use Interpolation round => 'round'; print "The sum is: $round{$sum, 0.01}\n";
+		use Interpolation 'round:$$->$' => 'round'; print "The sum is: $round{$sum}{0.01}\n";
+
 	htmlescape	- escapes characters special to HTML
 			"<b>$htmlescape{$text}</b>
 	tagescape	- escapes characters special to HTML plus double and single quotes
@@ -388,7 +490,7 @@ you can refer to these by name in the C<use> or C<import> line.  They are:
 
 =head1 ADVANCED
 
-It is posible to pass multiple arguments to your function.
+It is posible to pass multiple (or no) arguments to your function.
 There are two alternate syntaxes:
 
     $interpolator{param1,param2}
@@ -424,10 +526,10 @@ specifies the type of one brace in the call.
 In addition you may add an asterisk
 to the end of the input type specification. This will allow for an arbitrary long
 list of parameters. Their type will be the last specified.
-In case you use this feature you HAVE to "close" the interpolator call by $;.
-That is you will write something like "xxx $foo{par1}{par2}...{parn}{$;} xxx".
-If you do not close the statement, wou will get something like HASH(0x452362)
-instead of the result!
+
+In previous version you had to "close" the interpolator call by $;.
+That is you would write something like "xxx $foo{par1}{par2}...{parn}{$;} xxx".
+While this is still suported it is NOT required anymore.
 
 The default type is $->$.
 
@@ -453,6 +555,8 @@ The default type is $->$.
                   $foo{paramA}{paramB1,paramB2,...}
   'foo:$*->$   - ask for arbitrary number of scalar parameters
                   $foo{par1}{par2}{par3}{$;}
+  'foo:->$	- no parameters. This creates a tied scalar.
+                  $foo
 
 
  'foo:@->$' => &bar   IS EQUAL TO   'foo' => sub {&bar(split /$;/o, $_[0])}
@@ -462,6 +566,22 @@ The default type is $->$.
 
 The builtin function sprintf could be implemented as:
     'sprintf:$@->$' => sub {sprintf shift,@_}
+
+Since version 0.69 it is possible to assign to interpolators of type '$->$', '$->@' and '->$'.
+The assigned value will be passed to the function you specified as the last parameter:
+
+	use Interpolation 'count:->$' => sub {if (@_) {$count = $_[0]} else {$count++}};
+	# print "Current count is $count\n";
+	use Interpolation 'count:$->$' => sub {
+		if (@_ == 2) {
+			$count{$_[0]} = $_[1]
+		} else {
+			$count{$_[0]}++
+		}
+	};
+	# print "Current count of A is $count{A}\n";
+
+
 
 =head1 Cool examples
 
@@ -545,10 +665,10 @@ http://Jenda.Krynicky.cz/#Interpolation
 =end man
 
 =begin html
-
 <p>Originaly, Mark-Jason Dominus (<a href="mailto:mjd-perl-interpolation@plover.com"><tt>mjd-perl-interpolation@plover.com</tt></a>), Plover Systems co.<BR/>
 <a href="http://www.plover.com/~mjd/perl/Interpolation">http://www.plover.com/~mjd/perl/Interpolation</a></p>
 
+=for html
 Now maintained by, <a href="mailto:Jenda@Krynicky.cz">Jenda Krynicky</a>.<BR/>
 <a href="http://Jenda.Krynicky.cz/#Interpolation">http://Jenda.Krynicky.cz/#Interpolation</a></p>
 

@@ -39,7 +39,7 @@ check("$N2{substr('this', 1, 2)}" eq "hi");
 # unimport
 {
   local $^W = 0;		# Suppress `undefined value' warnings
-  unimport Interpolation N2;
+  unimport Interpolation 'N2';
   check("$N2{1+2}" eq "");
   check("$N2{substr('this', 1, 2)}" eq "");
 }
