@@ -3,9 +3,10 @@
 # This module is copyright 1998 Mark-Jason Dominus.
 # (mjd-perl-interpolation@plover.com)
 #
+# Version 0.53 alpha $Revision: 1.2 $ $Date: 1998/04/09 18:59:07 $
 
 package Interpolation;
-$VERSION = '0.50';
+$VERSION = '0.53';
 
    
 
@@ -39,6 +40,11 @@ use Carp;
 	      sub { sprintf($format, split /$;/o,$_[0])};
 	      \%fakehash;
 	    },
+	    'sprintf1' =>
+	    sub {
+	      my ($fmt, @args) = split(/$;/o, shift());
+	      sprintf($fmt, @args);
+	    }
 	   );
 
 sub import {
@@ -90,9 +96,19 @@ sub TIEHASH {
 }
 
 # Deprecated unless someone has a good idea of what it is good for.
-sub TIEARRAY {
-  my $pack = shift;
-  bless $builtin{identity} => $pack;
+{ 
+  # To suppress the warning, set this variable to 1.
+  $TIEARRAY_WARNED = 0;
+
+  sub TIEARRAY {
+    my $pack = shift;
+
+    unless ($TIEARRAY_WARNED++) {
+      carp "Tied $pack arrays are deprecated.\n  Send email to mjd-perl-interpolation\@plover.com\n  to prevent them from being removed in a future version.\n";
+    }
+
+    bless $builtin{identity} => $pack;
+  }
 }
 
 # This is where the magic is.
@@ -183,6 +199,10 @@ by using
 
   import Interpolation name => function, ...
 
+You can remove them again with
+
+  unimport Interpolation 'name', ...
+
 =head2 Built-ins
 
 C<Interpolation> provides a few useful built-in formatting functions;
@@ -195,6 +215,7 @@ you can refer to these by name in the C<use> or C<import> line.  They are:
       commify  1428571 => 1,428,571.00
       reverse  reverse string
       sprintf  makes "$S{'%.2f %03d'}{37.5,42}" turn into "37.50 042".
+      sprintf1 makes "$S{'%.2f %03d', 37.5,42}" turn into "37.50 042".
 
 =for comment
 Examples:
@@ -260,7 +281,6 @@ for news and upgrades.
 =end man
 
 =begin html
-
 <p>Mark-Jason Dominus (<a href="mailto:mjd-perl-interpolation@plover.com"><tt>mjd-perl-interpolation@plover.com</tt></a>), Plover Systems co.</p>
 <p>See <a href="http://www.plover.com/~mjd/perl/Interpolation/">The <tt>Interpolation.pm</tt> Page</a> for news and upgrades.</p>
 

@@ -1,4 +1,5 @@
 Interpolation.pm
+README
 Makefile.PL
 MANIFEST
 t/import.t

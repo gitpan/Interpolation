@@ -4,7 +4,7 @@ $^W = 0;
 use lib '..';
 use Interpolation;
 
-print "1..29\n";
+print "1..34\n";
 
 {
   my $TEST = 1;
@@ -64,3 +64,11 @@ check("$S1{'%s'}{'snonk'}" eq 'snonk');
 check("$S1{'%d-%d'}{3,4}" eq '3-4');
 check("$S1{'%d:%02d:%02d'}{1,7,0}" eq '1:07:00');
 untie %S1;
+
+import Interpolation S2 => 'sprintf1';
+check("$S2{'%.2f', 7/3}" eq '2.33');
+check("$S2{'%04d', 1}" eq '0001');
+check("$S2{'%s','snonk'}" eq 'snonk');
+check("$S2{'%d-%d',3,4}" eq '3-4');
+check("$S2{'%d:%02d:%02d',1,7,0}" eq '1:07:00');
+untie %S2;
