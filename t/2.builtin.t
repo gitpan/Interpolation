@@ -5,7 +5,7 @@ no warnings 'untie';
 #use lib '..';
 use Interpolation;
 
-print "Interpolation.pm ver. $Interpolation::VERSION\n1..48\n";
+print "Interpolation.pm ver. $Interpolation::VERSION\n1..53\n";
 
 {
   my $TEST = 1;
