@@ -4,12 +4,12 @@
 # (mjd-perl-interpolation@plover.com)
 # and 2002-2003 Jenda Krynicky
 #
-# Version 0.69 by Jenda based on
+# Version 0.70 by Jenda based on
 # Version 0.53 alpha $Revision: 1.2 $ $Date: 1998/04/09 18:59:07 $ by MJD
 
 package Interpolation;
 use vars '$VERSION';
-$VERSION = '0.69';
+$VERSION = '0.70';
 use strict 'vars';
 use warnings;
 no warnings 'uninitialized'; # I don't want to be forced to use "if (defined $foo and $foo)
@@ -48,7 +48,7 @@ use Carp;
 	      my ($fmt, @args) = split(/$;/o, shift());
 	      sprintf($fmt, @args);
 	    },
-		'sprintfX' => sub {sprintf shift(), @_},
+		'sprintfx' => sub {sprintf shift(), @_},
 	    'sqlescape' => sub {$_ = $_[0]; s/'/''/g; "'".$_},
 		'htmlescape' => sub {HTML::Entities::encode($_[0], '^\r\n\t !\#\$%\"\'-;=?-~')},
 		'tagescape' => sub {HTML::Entities::encode($_[0], '^\r\n\t !\#\$%\(-;=?-~')},
@@ -87,7 +87,7 @@ sub import {
     my $function = shift;
     my $type;
 
-    if ($hashname =~ /^(.*):([\$\@\*\\]*->[\$\@])$/) {
+    if ($hashname =~ /^(.+):([\$\@\*\\]*->[\$\@])$/) {
         # there is a type specification !
         $type = $2;
         $hashname = $1;
@@ -371,7 +371,7 @@ sub STORE {
 
 Interpolation - Arbitrary string interpolation semantics (using tie())
 
-Version 0.69
+Version 0.70
 
 Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
 Since version 0.66 maintained by Jenda@Krynicky.cz

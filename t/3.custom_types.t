@@ -18,8 +18,9 @@ print "Interpolation.pm ver. $Interpolation::VERSION\n1..31\n";
 
 print "Testing Interpolation::Scalar ('name:->\$' => ...)\n";
 {	my $count = 0;
-	import Interpolation 'count:->$' => sub {if (@_) {$count = $_[0]} else {$count++}};
+	use Interpolation 'count:->$' => sub {if (@_) {$count = $_[0]} else {$count++}};
 }
+
 check("$count" == 0);
 check("$count" == 1);
 check("$count" == 2);

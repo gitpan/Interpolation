@@ -89,6 +89,15 @@ check("$S2{'%d-%d',3,4}" eq '3-4');
 check("$S2{'%d:%02d:%02d',1,7,0}" eq '1:07:00');
 untie %S2;
 
+print "\nTesting 'sprintfx'\n";
+import Interpolation 'S3:$$*->$' => 'sprintfx';
+check("$S3{'%.2f'}{7/3}" eq '2.33');
+check("$S3{'%04d'}{1}" eq '0001');
+check("$S3{'%s'}{'snonk'}" eq 'snonk');
+check("$S3{'%d-%d'}{3}{4}" eq '3-4');
+check("$S3{'%d:%02d:%02d'}{1}{7}{0}" eq '1:07:00');
+untie %S3;
+
 print "\nTesting 'sqlescape'\n";
 import Interpolation Q1 => 'sqlescape';
 check("$Q1{'hello'}" eq "'hello"); # keep in mind that the sqlescape adds a quote in front of the text, but not at the end!
@@ -118,3 +127,4 @@ check("$H3{'1 < 2'}" eq '1 &lt; 2');
 check("$H3{'you & me'}" eq 'you &amp; me');
 check(qq{$H3{'I said: "Hello".'}} eq 'I said: \&quot;Hello\&quot;.');
 untie %H3;
+

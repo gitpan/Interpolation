@@ -1,7 +1,7 @@
 
                                Interpolation.pm
 
-(Current version 0.68; last updated 5 April 2002)
+(Current version 0.70; last updated 21 August 2003)
 
    Suppose your program needs to print out a lot of dollar amounts, and
    you'd like to print each one out with a leading dollar sign, commas
