@@ -4,12 +4,12 @@
 # (mjd-perl-interpolation@plover.com)
 # and 2002 Jenda Krynicky
 #
-# Version 0.67 by Jenda based on
+# Version 0.68 by Jenda based on
 # Version 0.53 alpha $Revision: 1.2 $ $Date: 1998/04/09 18:59:07 $ by MJD
 
 package Interpolation;
 use vars '$VERSION';
-$VERSION = '0.67';
+$VERSION = '0.68';
 use strict 'vars';
 use warnings;
 no warnings 'uninitialized'; # I don't want to be forced to use "if (defined $foo and $foo)
@@ -115,28 +115,32 @@ sub import {
 }
 
 sub unimport {
-#  warn "Interpolation::unimport @_\n";
-  my $caller_pack = caller;
-  my $my_pack = shift;
-  while (@_) {
-    my $hashname = shift;
-    my %fakehash;
-    my $oldhash = *{$caller_pack . '::' . $hashname}{HASH};
-    *{$caller_pack . '::' . $hashname} = \%fakehash;
-    untie %$oldhash;
-  }
-
+	no warnings 'untie';
+	my $caller_pack = caller;
+	my $my_pack = shift;
+	while (@_) {
+		my $hashname = shift;
+		my %fakehash;
+		my $oldhash = *{$caller_pack . '::' . $hashname}{HASH};
+		*{$caller_pack . '::' . $hashname} = \%fakehash;
+		untie %$oldhash;
+	}
 }
 
 sub TIEHASH {
-  my $pack = shift;
-  my $cref = shift;
-  unless (ref $cref) {		# Convert symbolic name to function ref
-    croak "Unknown builtin function `$cref'; aborting"
-      unless exists $Interpolation::builtin{$cref};
-    $cref = $Interpolation::builtin{$cref};
-  }
-  bless $cref => $pack;		# That's it?  Yup!
+	my $pack = shift;
+	my $cref = shift;
+	unless (ref $cref) {		# Convert symbolic name to function ref
+		croak "Unknown builtin function `$cref'; aborting"
+			unless exists $Interpolation::builtin{lc $cref};
+
+		eval $Interpolation::needmodules{lc $cref}
+			if (exists $Interpolation::needmodules{lc $cref});
+		croak $@ if $@;
+
+		$cref = $Interpolation::builtin{lc $cref};
+	}
+	bless $cref => $pack;		# That's it?  Yup!
 }
 
 # Deprecated unless someone has a good idea of what it is good for.
@@ -288,7 +292,7 @@ sub FETCH {
 
 Interpolation - Arbitrary string interpolation semantics
 
-Version 0.67
+Version 0.68
 
 Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
 Since version 0.66 maintained by Jenda@Krynicky.cz

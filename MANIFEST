@@ -2,5 +2,5 @@ Interpolation.pm
 README
 Makefile.PL
 MANIFEST
-t/import.t
-t/builtin.t
+t/1.import.t
+t/2.builtin.t

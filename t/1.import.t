@@ -3,10 +3,10 @@
 # Test use, import, unimport, tie, untie
 
 
-use lib '..';
+#use lib '..';
 use Interpolation N1 => 'null';
 
-print "1..10\n";
+print "Interpolation.pm ver. $Interpolation::VERSION\n1..10\n";
 
 {
   my $TEST = 1;
@@ -22,7 +22,7 @@ check("$N1{1+2}" eq "3");
 check("$N1{substr('this', 1, 2)}" eq "hi");
 
 # `no' doesn't work and can't be made to work;
-# at present its effects can't be made to have lexical 
+# at present its effects can't be made to have lexical
 # scope, and they always occur at compile time.  So
 # `no' is useless.
 # {

@@ -1,10 +1,11 @@
 #!/usr/bin/perl
-$^W = 0;
+use warnings;
+no warnings 'untie';
 
-use lib '..';
+#use lib '..';
 use Interpolation;
 
-print "1..34\n";
+print "Interpolation.pm ver. $Interpolation::VERSION\n1..48\n";
 
 {
   my $TEST = 1;
@@ -46,7 +47,7 @@ untie %U1;
 
 print "\nTesting 'commify'\n";
 import Interpolation C1 => 'commify';
-check("$C1{'the quick brown fox'}" == 0); print "\t(the warning above IS expected!)\n";
+check("$C1{'the quick brown fox'}" == 0); print STDERR "\t(the warning above IS expected!)\n";
 check("$C1{123}" eq '123.00');
 check("$C1{1234}" eq '1,234.00');
 check("$C1{12345}" eq '12,345.00');
