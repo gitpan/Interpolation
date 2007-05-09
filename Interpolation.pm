@@ -4,12 +4,12 @@
 # (mjd-perl-interpolation@plover.com)
 # and 2002-2003 Jenda Krynicky
 #
-# Version 0.70 by Jenda based on
+# Version 0.71 by Jenda based on
 # Version 0.53 alpha $Revision: 1.2 $ $Date: 1998/04/09 18:59:07 $ by MJD
 
 package Interpolation;
 use vars '$VERSION';
-$VERSION = '0.70';
+$VERSION = '0.71';
 use strict 'vars';
 use warnings;
 no warnings 'uninitialized'; # I don't want to be forced to use "if (defined $foo and $foo)
@@ -108,9 +108,10 @@ sub import {
         }
 
     }
-    # Probably should use ISA or something here, because
-    # $function might be blessed
-	if (!(ref $function eq 'CODE')) {
+
+	if (ref $function) {
+		croak "'use Interpolation' needs a reference to a subroutine or a builtin name!" unless "$function" =~ /\bCODE\(/;
+	} else {
 		my $lc_function = lc $function;
 		my $lc_hashname;
 		if (exists $Interpolation::builtin{$lc_function}) {
@@ -371,7 +372,7 @@ sub STORE {
 
 Interpolation - Arbitrary string interpolation semantics (using tie())
 
-Version 0.70
+Version 0.71
 
 Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
 Since version 0.66 maintained by Jenda@Krynicky.cz

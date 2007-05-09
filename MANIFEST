@@ -6,3 +6,4 @@ MANIFEST
 t/1.import.t
 t/2.builtin.t
 t/3.custom_types.t
+META.yml                                 Module meta-data (added by MakeMaker)
