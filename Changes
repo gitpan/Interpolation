@@ -14,3 +14,6 @@ Since version 0.66 maintained by Jenda@Krynicky.cz
 
 0.73 - Sat Jun 13 2003
 	added support for tie()ing lexicals even with types.
+
+0.74 - Wed Sep 30 2009
+	skipping tests dependent on HTML::Entities if not available

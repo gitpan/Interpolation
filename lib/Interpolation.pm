@@ -6,7 +6,7 @@
 
 package Interpolation;
 use vars '$VERSION';
-$VERSION = '0.73';
+$VERSION = '0.74';
 use strict 'vars';
 use warnings;
 no warnings 'uninitialized'; # I don't want to be forced to use "if (defined $foo and $foo)
@@ -366,7 +366,7 @@ sub STORE {
 
 Interpolation - Arbitrary string interpolation semantics (using tie())
 
-Version 0.73
+Version 0.74
 
 Originaly by Mark-Jason Dominus (mjd-perl-interpolation@plover.com)
 Since version 0.66 maintained by Jenda@Krynicky.cz

@@ -9,3 +9,4 @@ t/3.custom_types.t
 t/4.tie_to_lexicals.t
 META.yml                                 Module meta-data (added by MakeMaker)
 Makefile.PL
+LICENSE

@@ -94,25 +94,31 @@ is(qq{$Q1{"d'Artagnan"}}, "'d''Artagnan");
 untie %Q1;
 
 
-ok( (import Interpolation H1 => 'htmlescape'), "Testing 'htmlescape'");
-is("$H1{'hello'}", 'hello');
-is("$H1{'1 < 2'}", '1 &lt; 2');
-is("$H1{'you & me'}", 'you &amp; me');
-is(qq{$H1{'I said: "Hello".'}}, 'I said: "Hello".');
-untie %H1;
+SKIP: {
+	eval { require HTML::Entities };
+
+	skip "HTML::Entities not installed. htmlescape, tagescape and JSescape builtins not available", 3*5 if $@;
+
+	ok( (import Interpolation H1 => 'htmlescape'), "Testing 'htmlescape'");
+	is("$H1{'hello'}", 'hello');
+	is("$H1{'1 < 2'}", '1 &lt; 2');
+	is("$H1{'you & me'}", 'you &amp; me');
+	is(qq{$H1{'I said: "Hello".'}}, 'I said: "Hello".');
+	untie %H1;
 
 
-ok( (import Interpolation H2 => 'tagescape'), "Testing 'tagescape'");
-is("$H2{'hello'}", 'hello');
-is("$H2{'1 < 2'}", '1 &lt; 2');
-is("$H2{'you & me'}", 'you &amp; me');
-is(qq{$H2{'I said: "Hello".'}}, 'I said: &quot;Hello&quot;.');
-untie %H2;
+	ok( (import Interpolation H2 => 'tagescape'), "Testing 'tagescape'");
+	is("$H2{'hello'}", 'hello');
+	is("$H2{'1 < 2'}", '1 &lt; 2');
+	is("$H2{'you & me'}", 'you &amp; me');
+	is(qq{$H2{'I said: "Hello".'}}, 'I said: &quot;Hello&quot;.');
+	untie %H2;
 
 
-ok( (import Interpolation H3 => 'JSescape'), "Testing 'jsescape'");
-is("$H3{'hello'}", 'hello');
-is("$H3{'1 < 2'}", '1 &lt; 2');
-is("$H3{'you & me'}", 'you &amp; me');
-is(qq{$H3{'I said: "Hello".'}}, 'I said: \&quot;Hello\&quot;.');
-untie %H3;
+	ok( (import Interpolation H3 => 'JSescape'), "Testing 'jsescape'");
+	is("$H3{'hello'}", 'hello');
+	is("$H3{'1 < 2'}", '1 &lt; 2');
+	is("$H3{'you & me'}", 'you &amp; me');
+	is(qq{$H3{'I said: "Hello".'}}, 'I said: \&quot;Hello\&quot;.');
+	untie %H3;
+}
